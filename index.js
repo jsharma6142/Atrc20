@@ -12,7 +12,7 @@ app.use(express.static(__dirname)); // for serving admin.html & dashboard.html
 // Supabase setup
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_API_KEY
 );
 
 // Tron setup
