@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      background-color: #0b0f1a;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #131b2b;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #1e2a3f;
+    }
+    th {
+      background-color: #1f2a40;
+    }
+    tr:hover {
+      background-color: #1a253a;
+    }
+    .logout {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #ff3b3b;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button class="logout" onclick="logout()">Logout</button>
+  <h2>Approved Wallets</h2>
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>Wallet</th>
+        <th>Amount</th>
+        <th>Balance</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script type="module">
+    if (localStorage.getItem("auth") !== "true") {
+      window.location.href = "admin.html";
+    }
+
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabaseUrl = "https://ycmspiedqvwzzrgpxeci.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljbXNwaWVkcXZ3enpyZ3B4ZWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM1OTMxODQsImV4cCI6MjA2OTE2OTE4NH0.z0sw1x0ysYlBdIg4zGM8Y6J59KTVw3Ta9j-xaxCbT5o";
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data, error } = await supabase
+      .from("Approvals")
+      .select("*")
+      .order("timestamp", { ascending: false });
+
+    const tbody = document.querySelector("#dataTable tbody");
+
+    if (data) {
+      data.forEach((entry) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${entry.wallet_address}</td>
+          <td>${entry.amount}</td>
+          <td>${entry.balance}</td>
+          <td>${new Date(entry.timestamp).toLocaleString()}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+  </script>
+
+  <script>
+    function logout() {
+      localStorage.removeItem("auth");
+      window.location.href = "admin.html";
+    }
+  </script>
+</body>
+</html>
